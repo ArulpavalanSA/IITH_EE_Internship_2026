@@ -17,36 +17,36 @@ $$\text{power} = \sum_{i=0}^{N-1} \left( A_{1,re}[i]^2 + A_{1,im}[i]^2 + A_{2,re
 ### 2. Dynamic Learning Rate Calibration
 The global dynamic step size ($\alpha$) is updated in the `COMPUTE_AX` state by scaling a fixed-point numerator inversely by the channel energy to maintain safe $Q2.14$ execution precision:
 
-$$\alpha = \frac{1 \ll \left(2 \cdot \text{SHIFT\_PRODUCT} + 14\right)}{\text{power}}$$
+$$\alpha = \frac{1 \ll \left(2 \cdot \text{SHIFT PRODUCT} + 14\right)}{\text{power}}$$
 
 ### 3. Combined Complex Estimate & Error Residuals
 For each individual sample element, the parallel complex multipliers generate a combined estimate to extract the real and imaginary coordinate variances:
 
-$$\text{ax\_combined\_re}[i] = (A_{1,re}[i] \cdot x_{1,re} - A_{1,im}[i] \cdot x_{1,im}) + (A_{2,re}[i] \cdot x_{2,re} - A_{2,im}[i] \cdot x_{2,im})$$
+$$\text{ax combined re}[i] = (A_{1,re}[i] \cdot x_{1,re} - A_{1,im}[i] \cdot x_{1,im}) + (A_{2,re}[i] \cdot x_{2,re} - A_{2,im}[i] \cdot x_{2,im})$$
 
-$$\text{ax\_combined\_im}[i] = (A_{1,re}[i] \cdot x_{1,im} + A_{1,im}[i] \cdot x_{1,re}) + (A_{2,re}[i] \cdot x_{2,im} + A_{2,im}[i] \cdot x_{2,re})$$
+$$\text{ax combined im}[i] = (A_{1,re}[i] \cdot x_{1,im} + A_{1,im}[i] \cdot x_{1,re}) + (A_{2,re}[i] \cdot x_{2,im} + A_{2,im}[i] \cdot x_{2,re})$$
 
-$$r_{re}[i] = y[i] - \text{ax\_combined\_re}[i]$$
+$$r_{re}[i] = y[i] - \text{ax combined re}[i]$$
 
-$$r_{im}[i] = 0 - \text{ax\_combined\_im}[i]$$
+$$r_{im}[i] = 0 - \text{ax combined im}[i]$$
 
 ### 4. Dual Accumulated Cross-Product Gradients
 The system computes matching trajectories independently for both coordinate channels across $N$ samples via conjugate transposition:
 
-$$\text{total\_grad1\_re} = \sum_{i=0}^{N-1} \left( A_{1,re}[i] \cdot r_{re}[i] + A_{1,im}[i] \cdot r_{im}[i] \right)$$
+$$\text{total grad1 re} = \sum_{i=0}^{N-1} \left( A_{1,re}[i] \cdot r_{re}[i] + A_{1,im}[i] \cdot r_{im}[i] \right)$$
 
-$$\text{total\_grad1\_im} = \sum_{i=0}^{N-1} \left( A_{1,re}[i] \cdot r_{im}[i] - A_{1,im}[i] \cdot r_{re}[i] \right)$$
+$$\text{total grad1 im} = \sum_{i=0}^{N-1} \left( A_{1,re}[i] \cdot r_{im}[i] - A_{1,im}[i] \cdot r_{re}[i] \right)$$
 
-$$\text{total\_grad2\_re} = \sum_{i=0}^{N-1} \left( A_{2,re}[i] \cdot r_{re}[i] + A_{2,im}[i] \cdot r_{im}[i] \right)$$
+$$\text{total grad2 re} = \sum_{i=0}^{N-1} \left( A_{2,re}[i] \cdot r_{re}[i] + A_{2,im}[i] \cdot r_{im}[i] \right)$$
 
-$$\text{total\_grad2\_im} = \sum_{i=0}^{N-1} \left( A_{2,re}[i] \cdot r_{im}[i] - A_{2,im}[i] \cdot r_{re}[i] \right)$$
+$$\text{total grad2 im} = \sum_{i=0}^{N-1} \left( A_{2,re}[i] \cdot r_{im}[i] - A_{2,im}[i] \cdot r_{re}[i] \right)$$
 
 ### 5. Parallel Optimization Step Rules
 $$\begin{aligned}
-x_{1,re}^{(k+1)} &= x_{1,re}^{(k)} + \left( \alpha \cdot \text{total\_grad1\_re} \right) \\
-x_{1,im}^{(k+1)} &= x_{1,im}^{(k)} + \left( \alpha \cdot \text{total\_grad1\_im} \right) \\
-x_{2,re}^{(k+1)} &= x_{2,re}^{(k)} + \left( \alpha \cdot \text{total\_grad2\_re} \right) \\
-x_{2,im}^{(k+1)} &= x_{2,im}^{(k)} + \left( \alpha \cdot \text{total\_grad2\_im} \right)
+x_{1,re}^{(k+1)} &= x_{1,re}^{(k)} + \left( \alpha \cdot \text{total grad1 re} \right) \\
+x_{1,im}^{(k+1)} &= x_{1,im}^{(k)} + \left( \alpha \cdot \text{total grad1 im} \right) \\
+x_{2,re}^{(k+1)} &= x_{2,re}^{(k)} + \left( \alpha \cdot \text{total grad2 re} \right) \\
+x_{2,im}^{(k+1)} &= x_{2,im}^{(k)} + \left( \alpha \cdot \text{total grad2 im} \right)
 \end{aligned}$$
 
 ---
