@@ -16,7 +16,7 @@ The module coordinates data transfer and rate reduction between two separate clo
 ### 2. Dual-Stage Metastability Defenses (`clk_1`)
 * Because `clk` and `clk_1` operate asynchronously, the control flag `toggle` passes through a 2-bit shift-register pipeline (`toggle_sync`) clocked by the slower destination domain `clk_1`.
 * This dual-stage structure isolates metastability, and an edge detection circuit determines when a fresh transfer arrives by evaluating the inequality:
-$$\text{new\_packet} = (\text{toggle\_sync}[0] \neq \text{toggle\_sync}[1])$$
+$$\text{new packet} = (\text{toggle sync}[0] \neq \text{toggle sync}[1])$$
 
 ### 3. Decimation Logic & Serialization Loop
 * Upon detecting `new_packet`, an internal control flag `update` is raised. 
