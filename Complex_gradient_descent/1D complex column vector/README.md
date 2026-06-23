@@ -5,6 +5,8 @@ A parameterizable, block-sequential hardware module implemented in Verilog to pe
 
 ---
 
+---
+
 ## Mathematical Formulation
 
 Given a packed real observation vector $y$, real and imaginary data channel components $A_{re}$ and $A_{im}$, and a parameter state variable $x = (x_{re} + j \cdot x_{im})$, the FSM minimizes the Mean Squared Error (MSE) by processing streaming data sequences in fixed blocks.
@@ -15,7 +17,7 @@ $$\text{power} = \sum_{i=0}^{N-1} \left( A_{re}[i]^2 + A_{im}[i]^2 \right)$$
 
 The dynamic learning rate ($\alpha$) is updated in the `COMPUTE_AX` state by scaling a fixed-point numerator by the computed channel energy to maintain a $Q2.14$ precision layer:
 
-$$\alpha = \frac{1 \ll \left(2 \cdot \text{SHIFT}\char`\_ \text{PRODUCT} + 14\right)}{\text{power}}$$
+$$\alpha = \frac{1 \ll \left(2 \cdot \text{SHIFT\_PRODUCT} + 14\right)}{\text{power}}$$
 
 The complex residual error vector calculation for each element is governed by:
 
@@ -25,17 +27,17 @@ $$r_{im}[i] = 0 - (A_{re}[i] \cdot x_{im} + A_{im}[i] \cdot x_{re})$$
 
 The accumulated complex-conjugate gradients ($\nabla$) over a total set of $N$ samples are tracked via:
 
-$$\text{total}\char`\_ \text{grad}\char`\_ \text{re} = \sum_{i=0}^{N-1} \left( A_{re}[i] \cdot r_{re}[i] + A_{im}[i] \cdot r_{im}[i] \right)$$
+$$\text{total\_grad\_re} = \sum_{i=0}^{N-1} \left( A_{re}[i] \cdot r_{re}[i] + A_{im}[i] \cdot r_{im}[i] \right)$$
 
-$$\text{total}\char`\_ \text{grad}\char`\_ \text{im} = \sum_{i=0}^{N-1} \left( A_{re}[i] \cdot r_{im}[i] - A_{im}[i] \cdot r_{re}[i] \right)$$
+$$\text{total\_grad\_im} = \sum_{i=0}^{N-1} \left( A_{re}[i] \cdot r_{im}[i] - A_{im}[i] \cdot r_{re}[i] \right)$$
 
 The parameter update vector state rules for optimization follow:
 
-$$x_{re}^{(k+1)} = x_{re}^{(k)} + \left( \alpha \cdot \text{total}\char`\_ \text{grad}\char`\_ \text{re} \right)$$
+$$x_{re}^{(k+1)} = x_{re}^{(k)} + \left( \alpha \cdot \text{total\_grad\_re} \right)$$
 
-$$x_{im}^{(k+1)} = x_{im}^{(k)} + \left( \alpha \cdot \text{total}\char`\_ \text{grad}\char`\_ \text{im} \right)$$
+$$x_{im}^{(k+1)} = x_{im}^{(k)} + \left( \alpha \cdot \text{total\_grad\_im} \right)$$
+
 ---
-
 ## Key Features
 
 * **Parameterizable Block Sizes:** Fully dynamic configuration via `sample` and `BLOCK_SIZE` parameters to adapt to varying matrix constraints and balance system throughput with logical area costs.
