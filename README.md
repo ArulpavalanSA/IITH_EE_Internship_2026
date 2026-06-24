@@ -1,6 +1,6 @@
 # RTL Design & Verification Modules — IIT Hyderabad Internship (Summer 2026)
 
-This repository contains production-grade RTL hardware designs and verification pipelines developed during my research internship under **Dr. Abhishek Kumar** at **IIT Hyderabad**. The modules span arithmetic accelerators and high-speed interfaces for FPGA/ASIC synthesis.
+This repository contains production-grade RTL hardware designs and verification developed during my research internship under **Dr. Abhishek Kumar** at **IIT Hyderabad**. The modules span arithmetic accelerators and high-speed interfaces for FPGA/ASIC synthesis.
 
 ---
 
