@@ -1,0 +1,117 @@
+# Study Notes: Advanced Digital Compensation Filter Design for MWC
+
+## 1. What is MWC (Modulated Wideband Converter)?
+* **Definition:** An advanced analog-to-digital architecture designed to perform **sub-Nyquist sampling** of wideband signals.
+* **Condition:** This architecture only works when the wideband input signal is **sparse**.
+
+### Understanding "Sparsity"
+* A wideband signal is considered **sparse** if it contains only a few active radio frequency (RF) bands at any given point in time.
+* Even though the total spectrum area is massive, the actual information bands are present in small amounts, scattered across that large area.
+
+---
+
+## 2. Core Hardware Architecture and Working Principle
+The physical implementation of an MWC processing channel can be broken down into specific operational steps:
+
+```
+                  ┌───────────┐
+  x(t) ──> HRF ──>│           │
+                  │   Mixer   │──> HIF ──> HLPF ──> HADC ──> y(t) [ADC Output]
+  pi(t)──> HLO ──>│           │     └────────────────┘
+                  └───────────┘            Heq
+```
+
+### Step 1: Mixing (Modulation)
+* The incoming sparse wideband signal $x(t)$ is mixed (multiplied) with a high-frequency, **periodic pseudo-random binary sequence** $p_i(t)$.
+* **The Mathematical Shift Trick:** When you multiply two waveforms, you cause a frequency shift based on trigonometric identity:
+  $$\cos(A) \cdot \cos(B) = \frac{1}{2} [\cos(A + B) + \cos(A - B)]$$
+* This product splits the signal into an **ultra-high frequency component** $(A+B)$ and a **low-frequency baseband component** $(A-B)$.
+
+### Step 2: Analog Filtering & Digital Conversion
+* The mixed signal passes through an analog **Low-Pass Filter (LPF)** ($H_{LPF}$) which discards the high-frequency component, leaving only the low-frequency component $(A-B)$.
+* A lower-rate **Analog-to-Digital Converter (ADC)** ($H_{ADC}$) then tracks and samples this remaining low-frequency baseband wave.
+
+---
+
+## 3. Real-World Hardware Imperfections
+In ideal theory equations, physical circuit tracks do not alter signals. In actual engineering hardware, imperfections introduce significant frequency distortions:
+
+### Input Path Distortions
+1. **$H_{RF}$ (Radio Frequency Path Response):** Models unintended distortion/attenuation introduced by input connections, cables, and ports before reaching the mixer.
+2. **$H_{LO}$ (Local Oscillator Path Response):** Models how the physical circuit tracks distort the high-speed pseudo-random binary sequence before it drives the mixer switches.
+   * **Actual vs Ideal Code Coefficient Equation:**
+     $$\tilde{c}_{i,l} = c_{i,l} \cdot H_{LO}(l \cdot f_p)$$
+     *(Where $\tilde{c}_{i,l}$ is the hardware-distorted code vector coefficient, and $c_{i,l}$ is the ideal mathematical code weight).*
+
+### Downstream Lumped Distortion ($H_{eq}$)
+All non-idealities that happen immediately *after* the mixing node are combined into a single continuous frequency response term called **$H_{eq}$** (Equivalent Response):
+$$H_{eq} = H_{IF} \cdot H_{LPF} \cdot H_{ADC}$$
+* This encapsulates the non-ideal passband/stopband effects of the real mixer output path ($H_{IF}$), the analog filter ($H_{LPF}$), and the internal analog sampling steps of the ADC ($H_{ADC}$).
+
+---
+
+## 4. System Mathematical Models
+
+### Basic MWC Signal Equation
+Accounting for all real non-idealities, the mathematical representation of the digital spectrum captured right at the output of the basic ADC channel ($i$) is modeled as:
+$$\tilde{Y}_i(e^{j\omega T_s}) = \left( \sum_{l=-L_0}^{L_0} \tilde{c}_{i,-l} \cdot Z_l(f) \cdot R_l(f) \right) H_{eq}(f)$$
+
+* **$Z_l(f)$:** The clean, original input signal spectrum slice corresponding to index $l$.
+* **$R_l(f)$:** The specific path distortion slice from the RF network:
+  $$R_l(f) = H_{RF}(f - l \cdot f_p), \quad |f| < \frac{f_p}{2}$$
+
+### Advanced MWC Signal Equation (With Leakage)
+If adjacent channel leaks, crosstalk, or non-ideal filter stopband roll-offs are completely mapped out across boundaries, the advanced output tracking equation expands to:
+$$\acute{Y}_i(e^{j\omega T_s}) = \left( \sum_{k=-q'}^{q'} \sum_{l=-L_0-k}^{L_0-k} \tilde{c}_{i,-(l+k)} \cdot Z_{l+k}(f - k \cdot f_p) \cdot R_{l+k}(f - k \cdot f_p) \right) H_{eq}$$
+
+> **Engineering Assumptions for Simplification:**
+> 1. $H_{LO}$ non-idealities are completely taken care of beforehand by running standard sensing matrix calibration routines.
+> 2. $H_{RF}$ cable distortion variations across the active sparse slices are tiny and considered **negligibly small**.
+
+---
+
+## 5. Calibration, Crest Factor, & Training Signals
+To safely calculate the exact system distortion ($H_{eq}$) without blowing up hardware, a **multi-tone LPF training signal** $x_{LPF}(t)$ is fed into the converter input:
+
+$$x_{LPF}(t) = \sum_{\zeta=0}^{G} \cos\left(2\pi \left(\zeta \cdot \Delta f + \frac{\Delta f}{4} - \frac{f_p}{2} + f_c\right)t + \phi_\zeta\right)$$
+* Where $\Delta f = \frac{f_p}{G}$ and $G$ represents an odd number of total test tones.
+
+### The Crest Factor Problem
+* **Definition:** The ratio of a waveform's absolute peak amplitude to its total effective RMS power level:
+  $$\text{Crest Factor} = \frac{|x_{\text{peak}}|}{x_{\text{RMS}}}$$
+* **The Danger:** If you combine multiple tones, their voltage peaks can randomly align in time, generating an immense voltage spike. Because real ADCs have a rigid full-scale dynamic ceiling, these massive spikes trigger severe **clipping and saturation**, destroying signal integrity.
+
+### Solution: Newman Phases
+To counteract this clipping effect, the starting phase ($\phi_\zeta$) of each separate test tone is systematically forced into an offset arrangement calculated by the **Newman Phase Equation**:
+$$\phi_\zeta = \frac{\pi \cdot (\zeta - 1)^2}{G}$$
+* This mathematical offset prevents tone peaks from aligning simultaneously, ensuring a highly optimized **low crest factor** that maximizes dynamic range without triggering clipping.
+
+### The Training Signal Spectrum Expression
+Because real training signals use real-valued sine waves, the resulting spectrum naturally splits into two perfectly mirrored parts: **positive frequency components** and **negative frequency components (conjugate images)**:
+
+$$\tilde{Y}_i(e^{j\omega T_s}) = \sum_{l=0}^{\infty} \Big( \underbrace{\tilde{c}_{i,-(k-l)} Z_k(f - l \cdot f_p) R_k(f)}_{\text{Positive Freq Component}} + \underbrace{\tilde{c}_{i,(k+l)} Z_{-k}(f - l \cdot f_p) R_k(-f)}_{\text{Negative Freq Component (Conjugate Image)}} \Big) H_{eq}(f)$$
+
+---
+
+## 6. Digital Pre-Processing and Compensation Filter Design
+
+### Step 1: Distortion Estimation
+By evaluating how the known multi-tone test signal maps through to the corrupted ADC output, the discrete distortion coefficients at tested frequency nodes $\hat{f} = n \cdot \frac{\Delta f}{2}$ are isolated:
+$$\hat{H}_{eq}[\hat{f}] = \frac{\tilde{Y}_i(e^{j2\pi \hat{f} T_s})}{\sum_{l=0}^{\infty} (c_{i,-(k-l)} Z_k(\hat{f}-l \cdot f_p) + c_{i,(k+l)} Z_{-k}(\hat{f}-l \cdot f_p))}$$
+
+* Applying **linear interpolation** across these discrete data nodes allows the complete, continuous hardware error response curve $\hat{H}_{eq}(f)$ to be generated.
+
+### Step 2: The Compensation Inverse Filter
+Once the hardware distortion $\hat{H}_{eq}(f)$ is completely mapped, the digital **compensation filter ($H_C$)** can be constructed by finding the absolute mathematical inverse of the combined system path:
+$$H_C(e^{j\omega}) = \frac{1}{\hat{H}_{eq}(f) \cdot H_S(e^{j\omega})}$$
+
+### Step 3: Hardware Pipeline Flow (RTL Target Structure)
+To execute this pre-processing block in hardware, the following digital pipeline architecture must be built in your RTL design:
+
+```
+  ADC Out ──> [ Upsampler (↑U) ] ──> [ Sharp Digital LPF (Hs) ] ──> [ Compensation Filter (Hc) ] ──> [ Downsampler (↓D) ] ──> Clean Output
+```
+* **Upsampler ($\uparrow U$):** Inserts $U-1$ zeros between each sample to elevate processing frequency.
+* **Sharp Digital LPF ($H_S$):** Suppresses out-of-band energy leaking through non-ideal analog filter stopbands.
+* **Compensation Filter ($H_C$):** Reconstructs and flattens out the passband amplitude/phase distortions caused by physical components.
+* **Downsampler ($\downarrow D$):** Decimates samples to lower the data throughput back to standard operating rates.
