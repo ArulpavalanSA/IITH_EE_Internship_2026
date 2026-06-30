@@ -1,12 +1,31 @@
 # RTL Design & Verification Modules — IIT Hyderabad Internship (Summer 2026)
 
-This repository contains production-grade RTL hardware designs and verification developed during my research internship under **Dr. Abhishek Kumar** at **IIT Hyderabad**. The modules span arithmetic accelerators and high-speed interfaces for FPGA/ASIC synthesis.
+This repository contains production-grade RTL hardware designs and verification pipelines developed during my research internship under **Dr. Abhishek Kumar** at **IIT Hyderabad**. The modules span arithmetic accelerators, high-speed interfaces, and signal processing DSP cores optimized for FPGA/ASIC synthesis.
 
 ---
 
 ## 📂 Repository Structure
 
 ```text
+├── Compensation filter/
+│   ├── matlab/
+│   │   ├── adc_din.txt
+│   │   ├── MWC Calibration & Compensation Filter.m
+│   │   └── readme.md
+│   ├── rtl/
+│   │   ├── downsampler.v
+│   │   ├── fir_filter.v
+│   │   ├── mwc_pre_processing_top.v
+│   │   └── upsampler.v
+│   ├── tb/
+│   │   ├── tb_fir_filter.v
+│   │   ├── tb_mwc_downsampler.v
+│   │   ├── tb_mwc_pre_processing_top.v
+│   │   └── tb_mwc_upsampler.v
+│   |── xsim/
+│   |   └── clean_dout.txt
+│   └── README
+|
 ├── Complex_divider/
 │   ├── rtl/
 │   │   └── complex_divider.v                 
